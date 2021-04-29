@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="842ef6f2-cc26-4b80-85c4-a21f75f6fff9" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="4e2d1494-3284-4ba3-be2f-2d7aec412ea8" >
+		<vm:queues >
+			<vm:queue queueName="CUSTOMER.PROFILE.IN" />
+			<vm:queue queueName="CUSTOMER.PROFILE.OUT" />
+		</vm:queues>
+	</vm:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="646f24a8-963a-42f2-9c0c-57b93549ecaa" >
+		<http:request-connection host="customer-profile-experience-api.us-e2.cloudhub.io" />
+	</http:request-config>
+	<flow name="customer-profile-async-consumerFlow" doc:id="03eb54d1-0ceb-4fe6-aaa6-c0ab2723a1a4" >
+		<http:listener doc:name="Listener" doc:id="ec022ffd-ac7d-4885-83cd-af2e49633e8a" config-ref="HTTP_Listener_config" path="/api/customer/profile/async"/>
+		<vm:publish queueName="CUSTOMER.PROFILE.IN" doc:name="Publish" doc:id="9eadb5db-7ebf-4e78-83a8-bc41a14112a6" config-ref="VM_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="10024150-ef1c-42ef-ab0f-872f33053ec8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "request submitted successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="customer-profile-async-consumerFlow1" doc:id="74e37ca2-88fc-42bc-bfe5-767782d3d116" >
+		<vm:listener queueName="CUSTOMER.PROFILE.IN" doc:name="Listener" doc:id="ee184654-f07a-41fc-8b19-2bee9e26302e" config-ref="VM_Config"/>
+		<http:request method="POST" doc:name="Request" doc:id="d76ce7c9-1bb7-4694-9bbc-b538bff6c54c" config-ref="HTTP_Request_configuration" path="/api/customer/profile">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_secret" : "9b0022002C3747Fe88920b2EaF5a81E7",
+	"client_id" : "9e3b8f2f7470416eaf169312f2699ae3"
+}]]]></http:headers>
+		</http:request>
+	</flow>
+</mule>
